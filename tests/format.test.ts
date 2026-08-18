@@ -13,6 +13,7 @@ import {
   truncate,
   updateEmbed,
 } from "../src/discord/format.ts";
+import { createThreadRequest, postMessageRequest } from "../src/discord/forum.ts";
 import type { NormalizedIncident } from "../src/providers/types.ts";
 
 const incident: NormalizedIncident = {
@@ -111,4 +112,27 @@ test("le post initial porte le statut, l'impact et le lien", () => {
   );
   assert.equal(embed.fields?.[0]?.value, "Investigation");
   assert.equal(embed.fields?.[1]?.value, "Majeur");
+});
+
+test("la création de post met thread_name dans le corps, pas dans l'URL", () => {
+  // Discord répond 400 / 220001 si thread_name est passé en query string.
+  const { url, payload } = createThreadRequest(
+    "https://discord.com/api/webhooks/1/token",
+    "GitHub — Elevated error rates",
+    initialEmbed(incident, "GitHub"),
+  );
+
+  assert.equal(url, "https://discord.com/api/webhooks/1/token?wait=true");
+  assert.equal((payload as { thread_name: string }).thread_name, "GitHub — Elevated error rates");
+});
+
+test("la réponse dans un post passe thread_id en query", () => {
+  const { url, payload } = postMessageRequest(
+    "https://discord.com/api/webhooks/1/token",
+    "999",
+    initialEmbed(incident, "GitHub"),
+  );
+
+  assert.equal(url, "https://discord.com/api/webhooks/1/token?wait=true&thread_id=999");
+  assert.equal("thread_name" in (payload as object), false);
 });

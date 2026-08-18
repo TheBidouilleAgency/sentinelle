@@ -17,9 +17,9 @@ export class DiscordForumClient implements ForumClient {
   #queue: Promise<unknown> = Promise.resolve();
 
   async createThread(webhookUrl: string, name: string, embed: Embed): Promise<string> {
-    const url = withQuery(webhookUrl, { wait: "true", thread_name: name });
+    const { url, payload } = createThreadRequest(webhookUrl, name, embed);
     // wait=true est obligatoire : la réponse porte channel_id, l'id du thread.
-    const body = await this.#send(url, { embeds: [embed] });
+    const body = await this.#send(url, payload);
     const threadId = (body as { channel_id?: unknown } | null)?.channel_id;
     if (typeof threadId !== "string") {
       throw new Error("Réponse Discord sans channel_id : impossible de suivre le thread");
@@ -28,8 +28,8 @@ export class DiscordForumClient implements ForumClient {
   }
 
   async postMessage(webhookUrl: string, threadId: string, embed: Embed): Promise<void> {
-    const url = withQuery(webhookUrl, { wait: "true", thread_id: threadId });
-    await this.#send(url, { embeds: [embed] });
+    const { url, payload } = postMessageRequest(webhookUrl, threadId, embed);
+    await this.#send(url, payload);
   }
 
   #send(url: string, payload: unknown): Promise<unknown> {
@@ -40,6 +40,34 @@ export class DiscordForumClient implements ForumClient {
     this.#queue = run.catch(() => undefined);
     return run;
   }
+}
+
+/**
+ * Création d'un post de forum. `thread_name` va dans le **corps JSON** : passé
+ * en query string, Discord répond 400 / 220001 "Webhooks posted to forum
+ * channels must have a thread_name or thread_id".
+ */
+export function createThreadRequest(
+  webhookUrl: string,
+  name: string,
+  embed: Embed,
+): { url: string; payload: unknown } {
+  return {
+    url: withQuery(webhookUrl, { wait: "true" }),
+    payload: { thread_name: name, embeds: [embed] },
+  };
+}
+
+/** Réponse dans un post existant : `thread_id` est bien un paramètre de query. */
+export function postMessageRequest(
+  webhookUrl: string,
+  threadId: string,
+  embed: Embed,
+): { url: string; payload: unknown } {
+  return {
+    url: withQuery(webhookUrl, { wait: "true", thread_id: threadId }),
+    payload: { embeds: [embed] },
+  };
 }
 
 async function request(url: string, payload: unknown): Promise<unknown> {
