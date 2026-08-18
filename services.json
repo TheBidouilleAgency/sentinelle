@@ -1,0 +1,6 @@
+[
+  { "key": "claude",  "name": "Claude",  "type": "statuspage", "url": "https://status.claude.com" },
+  { "key": "github",  "name": "GitHub",  "type": "statuspage", "url": "https://www.githubstatus.com" },
+  { "key": "npm",     "name": "npm",     "type": "statuspage", "url": "https://status.npmjs.org" },
+  { "key": "discord", "name": "Discord", "type": "statuspage", "url": "https://discordstatus.com" }
+]

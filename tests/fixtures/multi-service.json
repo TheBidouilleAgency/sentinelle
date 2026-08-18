@@ -1,0 +1,32 @@
+{
+  "incidents": [
+    {
+      "id": "inc-long-title",
+      "name": "Some users may experience degraded performance when using the search indexing pipeline across multiple regions",
+      "status": "monitoring",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/inclong",
+      "created_at": "2026-08-17T11:00:00Z",
+      "updated_at": "2026-08-17T11:05:00Z",
+      "resolved_at": null,
+      "incident_updates": [
+        {
+          "id": "upd-l1",
+          "status": "monitoring",
+          "body": "A fix has been deployed and we are monitoring the results. Backticks like `this` should be neutralised.",
+          "created_at": "2026-08-17T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "inc-empty",
+      "name": "Scheduled degradation",
+      "status": "investigating",
+      "impact": "none",
+      "created_at": "2026-08-17T12:00:00Z",
+      "updated_at": "2026-08-17T12:00:00Z",
+      "resolved_at": null,
+      "incident_updates": []
+    }
+  ]
+}

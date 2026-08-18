@@ -1,0 +1,21 @@
+{
+  "name": "sentinelle",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Veille des status pages de nos dépendances, publiée dans un forum Discord",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "node --watch src/index.ts",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.9.2"
+  }
+}
