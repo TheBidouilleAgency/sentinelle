@@ -1,3 +1,5 @@
+import { mkdir, open, rm, stat } from "node:fs/promises";
+import { dirname } from "node:path";
 import { loadConfig, ConfigError, type Config, type ServiceConfig } from "./config.ts";
 import { log, setLogLevel, errorFields } from "./log.ts";
 import { StatuspageProvider } from "./providers/statuspage.ts";
@@ -28,6 +30,26 @@ async function main(): Promise<void> {
     (s) => new StatuspageProvider(s.key, s.url),
   );
 
+  // En mode cron, deux passages ne doivent jamais se chevaucher : le state
+  // serait lu par les deux et chaque incident posté deux fois.
+  const release = config.runOnce ? await acquireLock(`${config.statePath}.lock`) : null;
+  if (config.runOnce && release === null) {
+    log.warn("run_once.locked", { message: "un passage précédent tourne encore, on saute celui-ci" });
+    return;
+  }
+
+  try {
+    await start(config, services, providers);
+  } finally {
+    await release?.();
+  }
+}
+
+async function start(
+  config: Config,
+  services: Map<string, ServiceConfig>,
+  providers: StatusProvider[],
+): Promise<void> {
   const state = await loadState(config.statePath);
 
   const runtime: Runtime = {
@@ -45,9 +67,52 @@ async function main(): Promise<void> {
     dryRun: config.dryRun,
     seeded: state.seeded,
     healthcheck: config.healthcheckUrl !== null,
+    runOnce: config.runOnce,
   });
 
+  if (config.runOnce) {
+    await runOnce(runtime);
+    return;
+  }
+
   await runLoop(runtime);
+}
+
+/** Un seul tick puis sortie : pour un hébergement sans process permanent (cron). */
+async function runOnce(runtime: Runtime): Promise<void> {
+  try {
+    await tick(runtime);
+    await pingHealthcheck(runtime.config.healthcheckUrl);
+  } catch (err) {
+    log.error("tick.failed", errorFields(err));
+    process.exitCode = 1;
+  }
+  await persist(runtime);
+}
+
+const LOCK_STALE_MS = 10 * 60 * 1000;
+
+/**
+ * Verrou par fichier créé en exclusif. Un verrou plus vieux que LOCK_STALE_MS
+ * vient d'un passage tué en route : on le reprend. Renvoie null si occupé.
+ */
+async function acquireLock(path: string): Promise<(() => Promise<void>) | null> {
+  await mkdir(dirname(path), { recursive: true });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const handle = await open(path, "wx");
+      await handle.writeFile(String(process.pid));
+      await handle.close();
+      return () => rm(path, { force: true });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      const age = Date.now() - (await stat(path)).mtimeMs;
+      if (age < LOCK_STALE_MS) return null;
+      log.warn("run_once.stale_lock", { ageMs: Math.round(age) });
+      await rm(path, { force: true });
+    }
+  }
+  return null;
 }
 
 async function runLoop(runtime: Runtime): Promise<void> {

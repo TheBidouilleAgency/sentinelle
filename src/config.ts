@@ -18,6 +18,8 @@ export type Config = {
   servicesPath: string;
   healthcheckUrl: string | null;
   dryRun: boolean;
+  /** Un seul tick puis sortie (lancement par cron). */
+  runOnce: boolean;
   logLevel: LogLevel;
 };
 
@@ -64,6 +66,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     servicesPath,
     healthcheckUrl: healthcheckUrl.length > 0 ? healthcheckUrl : null,
     dryRun: (env.DRY_RUN ?? "false").trim().toLowerCase() === "true",
+    runOnce: (env.RUN_ONCE ?? "false").trim().toLowerCase() === "true",
     logLevel: logLevel as LogLevel,
   };
 }

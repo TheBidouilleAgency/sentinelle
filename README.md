@@ -69,10 +69,24 @@ apparaissent comme des actions, ce qui permet de vérifier titres, couleurs et d
 | `SERVICES_PATH` | `./services.json` | liste des services |
 | `HEALTHCHECK_URL` | — | dead man's switch, optionnel |
 | `DRY_RUN` | `false` | logge les actions au lieu de poster |
+| `RUN_ONCE` | `false` | un seul tick puis sortie, pour un lancement par cron |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 
 Config invalide au boot (webhook manquant, `services.json` illisible) → crash immédiat
 avec un message explicite, jamais de démarrage dégradé silencieux.
+
+## Déploiement (cron, hébergement web Hostinger)
+
+Sans process permanent : une tâche cron lance un passage par minute avec `RUN_ONCE=true`.
+Un verrou (`<STATE_PATH>.lock`) empêche deux passages de se chevaucher ; un verrou de
+plus de 10 min est considéré comme abandonné. Node ≥ 22.18 exécute `src/index.ts`
+directement, sans build :
+
+```cron
+* * * * * cd ~/sentinelle && node --env-file=.env src/index.ts
+```
+
+`.env` (hors dépôt, `chmod 600`) contient `DISCORD_WEBHOOK_URL`, `STATE_PATH`, `RUN_ONCE=true`…
 
 ## Déploiement (Dokploy)
 
